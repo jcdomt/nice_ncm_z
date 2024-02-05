@@ -2,6 +2,7 @@
 package service
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
@@ -28,11 +29,10 @@ type S_S struct {
 	Lyric   string
 }
 
-var S S_S
+var S map[string]string
 
 func init() {
-	S.Playing = ""
-	S.Time = ""
+	S = make(map[string]string)
 }
 
 func NCM_WebSocket(c *gin.Context) {
@@ -44,9 +44,11 @@ func NCM_WebSocket(c *gin.Context) {
 	go ws_reader(ws)
 senderFor:
 	for {
-		err := ws.WriteMessage(websocket.TextMessage, []byte(<-NCM_List))
+		data := <-NCM_List
+		err := ws.WriteMessage(websocket.TextMessage, []byte(data))
 		if err != nil {
 			log.Println("write:", err)
+			NCM_List <- data
 			break senderFor
 		}
 	}
@@ -62,16 +64,12 @@ func ws_reader(ws *websocket.Conn) {
 		arr := strings.Split(string(msg), ";")
 		switch arr[0] {
 		case "change":
-			S.Playing = arr[1]
-		case "time":
-			S.Time = arr[1]
-		case "play":
-			S.Play = arr[1]
-		case "pic":
-			S.Pic = arr[1]
-		case "lyric":
-			S.Lyric = arr[1]
+			S["Playing"] = arr[1]
+		default:
+			S[arr[0]] = arr[1]
 		}
+		j, _ := json.Marshal(S)
+		CLI_List <- string(j)
 	}
 }
 

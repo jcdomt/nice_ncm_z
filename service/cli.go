@@ -2,7 +2,6 @@
 package service
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -15,10 +14,10 @@ var CLI_List = make(chan string, 1)
 var CLI_ONLY = true
 
 func CLI_WebSocket(c *gin.Context) {
-	if CLI_ONLY {
-		c.String(200, "<h1>同个网易云只支持一个副屏哦</h1>")
-	}
-	CLI_ONLY = false
+	// if CLI_ONLY {
+	// 	c.String(200, "<h1>同个网易云只支持一个副屏哦</h1>")
+	// }
+	// CLI_ONLY = false
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
@@ -27,9 +26,7 @@ func CLI_WebSocket(c *gin.Context) {
 	go cli_ws_reader(ws)
 senderFor:
 	for {
-		temp := <-CLI_List
-		fmt.Println(temp)
-		err := ws.WriteMessage(websocket.TextMessage, []byte(temp))
+		err := ws.WriteMessage(websocket.TextMessage, []byte(<-CLI_List))
 		if err != nil {
 			log.Println("write:", err)
 			break senderFor
@@ -78,4 +75,10 @@ func CLI_LESS(c *gin.Context) {
 func CLI_MORE(c *gin.Context) {
 	offset := c.Query("o")
 	NCM_List <- "more;" + offset
+}
+func CLI_SEARCH(c *gin.Context) {
+	NCM_List <- "search;" + c.Query("t")
+}
+func CLI_ORDER(c *gin.Context) {
+	NCM_List <- "order"
 }
